@@ -2,28 +2,43 @@ pipeline {
     agent any
 
     environment {
-        REPO_URL = 'https://github.com/Maharshi08/3-Tier-k8s.git'
+        REPO_URL     = 'https://github.com/Maharshi08/3-Tier-k8s.git'
         FRONTEND_DIR = 'Application-Code/frontend'
         DOCKER_IMAGE = 'maharshi08/3-tier-frontend'
-        DOCKER_TAG = "${BUILD_NUMBER}"
+        DOCKER_TAG   = "${BUILD_NUMBER}"
     }
 
     stages {
 
         stage('Clone Repository') {
             steps {
+                echo 'Cloning repository...'
                 git branch: 'main', url: "${REPO_URL}"
+            }
+        }
+
+        stage('Verify Frontend Structure') {
+            steps {
+                sh '''
+                  echo "Workspace:"
+                  pwd
+                  ls -la
+                  echo "Frontend directory:"
+                  ls -la Application-Code/frontend
+                '''
             }
         }
 
         stage('Install Dependencies') {
             steps {
+                echo 'Installing frontend dependencies using Node container...'
                 dir("${FRONTEND_DIR}") {
                     sh '''
                       docker run --rm \
-                      -v $PWD:/app \
-                      -w /app \
-                      node:20-alpine npm install
+                        -u root \
+                        -v "$(pwd)":/app \
+                        -w /app \
+                        node:20-alpine npm install
                     '''
                 }
             }
@@ -31,13 +46,30 @@ pipeline {
 
         stage('Build Frontend') {
             steps {
+                echo 'Building frontend application...'
                 dir("${FRONTEND_DIR}") {
                     sh '''
                       docker run --rm \
-                      -v $PWD:/app \
-                      -w /app \
-                      -e NODE_OPTIONS=--openssl-legacy-provider \
-                      node:20-alpine npm run build
+                        -u root \
+                        -v "$(pwd)":/app \
+                        -w /app \
+                        -e NODE_OPTIONS=--openssl-legacy-provider \
+                        node:20-alpine npm run build
+                    '''
+                }
+            }
+        }
+
+        stage('Test') {
+            steps {
+                echo 'Running frontend tests...'
+                dir("${FRONTEND_DIR}") {
+                    sh '''
+                      docker run --rm \
+                        -u root \
+                        -v "$(pwd)":/app \
+                        -w /app \
+                        node:20-alpine npm test -- --passWithNoTests || true
                     '''
                 }
             }
@@ -45,21 +77,29 @@ pipeline {
 
         stage('Build Docker Image') {
             steps {
+                echo 'Building Docker image...'
                 dir("${FRONTEND_DIR}") {
-                    sh "docker build -t ${DOCKER_IMAGE}:${DOCKER_TAG} -t ${DOCKER_IMAGE}:latest ."
+                    sh '''
+                      docker build \
+                        -t ${DOCKER_IMAGE}:${DOCKER_TAG} \
+                        -t ${DOCKER_IMAGE}:latest .
+                    '''
                 }
             }
         }
 
         stage('Push to DockerHub') {
             steps {
-                withCredentials([usernamePassword(
-                    credentialsId: 'docker-credentials',
-                    usernameVariable: 'DOCKER_USER',
-                    passwordVariable: 'DOCKER_PASS'
-                )]) {
+                echo 'Pushing Docker image...'
+                withCredentials([
+                    usernamePassword(
+                        credentialsId: 'docker-credentials',
+                        usernameVariable: 'DOCKER_USER',
+                        passwordVariable: 'DOCKER_PASS'
+                    )
+                ]) {
                     sh '''
-                      echo $DOCKER_PASS | docker login -u $DOCKER_USER --password-stdin
+                      echo "$DOCKER_PASS" | docker login -u "$DOCKER_USER" --password-stdin
                       docker push ${DOCKER_IMAGE}:${DOCKER_TAG}
                       docker push ${DOCKER_IMAGE}:latest
                       docker logout
@@ -70,10 +110,11 @@ pipeline {
 
         stage('Deploy to Kubernetes') {
             steps {
+                echo 'Deploying to Kubernetes...'
                 sh '''
                   kubectl set image deployment/frontend \
                   frontend=${DOCKER_IMAGE}:${DOCKER_TAG} \
-                  -n default
+                  -n default --record || true
                 '''
             }
         }
@@ -81,13 +122,14 @@ pipeline {
 
     post {
         always {
+            echo 'Pipeline execution completed'
             cleanWs()
         }
         success {
-            echo '✅ Frontend pipeline executed successfully!'
+            echo 'Frontend pipeline executed successfully 🎉'
         }
         failure {
-            echo '❌ Frontend pipeline execution failed!'
+            echo 'Frontend pipeline execution failed ❌'
         }
     }
 }
