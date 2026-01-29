@@ -1,20 +1,18 @@
 pipeline {
-    agent any
-    
-    // Add tools block to use Jenkins-managed NodeJS and JDK
-    tools {
-        nodejs 'nodejs'   // <-- must match the NodeJS name in Global Tool Config
-        jdk 'jdk'         // <-- must match the JDK name in Global Tool Config
+    agent {
+        docker {
+            image 'node:20-alpine'   // lightweight NodeJS
+            args '-u root:root'      // optional: run as root if needed for npm
+        }
     }
-    
+
     environment {
         REPO_URL = 'https://github.com/Maharshi08/3-Tier-k8s.git'
-        DOCKER_REGISTRY = 'docker.io'
+        FRONTEND_DIR = 'Application-Code/frontend'
         DOCKER_IMAGE = 'maharshi08/3-tier-frontend'
         DOCKER_TAG = "${BUILD_NUMBER}"
-        FRONTEND_DIR = 'Application-Code/frontend'
     }
-    
+
     stages {
         stage('Clone Repository') {
             steps {
@@ -22,18 +20,18 @@ pipeline {
                 git branch: 'main', url: "${REPO_URL}"
             }
         }
-        
+
         stage('Install Dependencies') {
             steps {
                 echo 'Installing frontend dependencies...'
                 dir("${FRONTEND_DIR}") {
-                    sh 'node -v'   // check Node version
-                    sh 'npm -v'    // check npm version
+                    sh 'node -v'
+                    sh 'npm -v'
                     sh 'npm install'
                 }
             }
         }
-        
+
         stage('Build') {
             steps {
                 echo 'Building frontend application...'
@@ -42,7 +40,7 @@ pipeline {
                 }
             }
         }
-        
+
         stage('Test') {
             steps {
                 echo 'Running tests...'
@@ -51,7 +49,7 @@ pipeline {
                 }
             }
         }
-        
+
         stage('Build Docker Image') {
             steps {
                 echo 'Building Docker image...'
@@ -60,7 +58,7 @@ pipeline {
                 }
             }
         }
-        
+
         stage('Push to Registry') {
             steps {
                 echo 'Pushing image to Docker registry...'
@@ -72,17 +70,15 @@ pipeline {
                 }
             }
         }
-        
+
         stage('Deploy to Kubernetes') {
             steps {
                 echo 'Deploying to Kubernetes cluster...'
-                sh '''
-                    kubectl set image deployment/frontend frontend=${DOCKER_IMAGE}:${DOCKER_TAG} -n default --record || true
-                '''
+                sh "kubectl set image deployment/frontend frontend=${DOCKER_IMAGE}:${DOCKER_TAG} -n default --record || true"
             }
         }
     }
-    
+
     post {
         always {
             echo 'Pipeline execution completed'
