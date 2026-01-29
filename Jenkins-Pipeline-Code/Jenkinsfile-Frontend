@@ -1,6 +1,12 @@
 pipeline {
     agent any
     
+    // Add tools block to use Jenkins-managed NodeJS and JDK
+    tools {
+        nodejs 'nodejs'   // <-- must match the NodeJS name in Global Tool Config
+        jdk 'jdk'         // <-- must match the JDK name in Global Tool Config
+    }
+    
     environment {
         REPO_URL = 'https://github.com/Maharshi08/3-Tier-k8s.git'
         DOCKER_REGISTRY = 'docker.io'
@@ -12,79 +18,67 @@ pipeline {
     stages {
         stage('Clone Repository') {
             steps {
-                script {
-                    echo 'Cloning repository...'
-                    git branch: 'main', url: "${REPO_URL}"
-                }
+                echo 'Cloning repository...'
+                git branch: 'main', url: "${REPO_URL}"
             }
         }
         
         stage('Install Dependencies') {
             steps {
-                script {
-                    echo 'Installing frontend dependencies...'
-                    dir("${FRONTEND_DIR}") {
-                        sh 'npm install'
-                    }
+                echo 'Installing frontend dependencies...'
+                dir("${FRONTEND_DIR}") {
+                    sh 'node -v'   // check Node version
+                    sh 'npm -v'    // check npm version
+                    sh 'npm install'
                 }
             }
         }
         
         stage('Build') {
             steps {
-                script {
-                    echo 'Building frontend application...'
-                    dir("${FRONTEND_DIR}") {
-                        sh 'NODE_OPTIONS="--openssl-legacy-provider" npm run build'
-                    }
+                echo 'Building frontend application...'
+                dir("${FRONTEND_DIR}") {
+                    sh 'NODE_OPTIONS="--openssl-legacy-provider" npm run build'
                 }
             }
         }
         
         stage('Test') {
             steps {
-                script {
-                    echo 'Running tests...'
-                    dir("${FRONTEND_DIR}") {
-                        sh 'npm test -- --passWithNoTests || true'
-                    }
+                echo 'Running tests...'
+                dir("${FRONTEND_DIR}") {
+                    sh 'npm test -- --passWithNoTests || true'
                 }
             }
         }
         
         stage('Build Docker Image') {
             steps {
-                script {
-                    echo 'Building Docker image...'
-                    dir("${FRONTEND_DIR}") {
-                        sh "docker build -t ${DOCKER_IMAGE}:${DOCKER_TAG} -t ${DOCKER_IMAGE}:latest ."
-                    }
+                echo 'Building Docker image...'
+                dir("${FRONTEND_DIR}") {
+                    sh "docker build -t ${DOCKER_IMAGE}:${DOCKER_TAG} -t ${DOCKER_IMAGE}:latest ."
                 }
             }
         }
         
         stage('Push to Registry') {
             steps {
-                script {
-                    echo 'Pushing image to Docker registry...'
-                    withCredentials([usernamePassword(credentialsId: 'docker-credentials', usernameVariable: 'DOCKER_USER', passwordVariable: 'DOCKER_PASS')]) {
-                        sh 'echo $DOCKER_PASS | docker login -u $DOCKER_USER --password-stdin'
-                        sh "docker push ${DOCKER_IMAGE}:${DOCKER_TAG}"
-                        sh "docker push ${DOCKER_IMAGE}:latest"
-                        sh 'docker logout'
-                    }
+                echo 'Pushing image to Docker registry...'
+                withCredentials([usernamePassword(credentialsId: 'docker-credentials', usernameVariable: 'DOCKER_USER', passwordVariable: 'DOCKER_PASS')]) {
+                    sh 'echo $DOCKER_PASS | docker login -u $DOCKER_USER --password-stdin'
+                    sh "docker push ${DOCKER_IMAGE}:${DOCKER_TAG}"
+                    sh "docker push ${DOCKER_IMAGE}:latest"
+                    sh 'docker logout'
                 }
             }
         }
         
         stage('Deploy to Kubernetes') {
             steps {
-                script {
-                    echo 'Deploying to Kubernetes cluster...'
-                    sh '''
-                        kubectl set image deployment/frontend frontend=${DOCKER_IMAGE}:${DOCKER_TAG} -n default --record || true
-                    '''
-                }
+                echo 'Deploying to Kubernetes cluster...'
+                sh '''
+                    kubectl set image deployment/frontend frontend=${DOCKER_IMAGE}:${DOCKER_TAG} -n default --record || true
+                '''
             }
         }
     }
