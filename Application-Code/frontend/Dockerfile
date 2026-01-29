@@ -1,6 +1,18 @@
-FROM node:14
+FROM node:20-alpine
+
 WORKDIR /usr/src/app
+
+# Copy only package files first (better caching)
 COPY package*.json ./
-RUN npm install
+
+# Install dependencies
+RUN npm install --production
+
+# Copy app source
 COPY . .
-CMD [ "npm", "start" ]
+
+# App port (optional but good practice)
+EXPOSE 3000
+
+# Start app
+CMD ["npm", "start"]
