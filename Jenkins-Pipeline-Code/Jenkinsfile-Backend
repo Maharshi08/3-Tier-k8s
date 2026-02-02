@@ -1,10 +1,13 @@
 pipeline {
     agent any
+    tools {
+        nodejs 'NodeJS_20'
+    }
     
     environment {
         REPO_URL = 'https://github.com/Maharshi08/3-Tier-k8s.git'
         DOCKER_REGISTRY = 'docker.io'
-        DOCKER_IMAGE = 'maharshi08/3-tier-backend'
+        DOCKER_IMAGE = 'maharshi86/3-tier-backend'
         DOCKER_TAG = "${BUILD_NUMBER}"
         BACKEND_DIR = 'Application-Code/backend'
     }
@@ -18,13 +21,35 @@ pipeline {
                 }
             }
         }
+
+        stage('Debug Node Environment') {
+            steps {
+                script {
+                    sh '''
+                      echo "=== Debug Info ==="
+                      echo "PATH=$PATH"
+                      echo "=== Checking node ==="
+                      which node || echo "node not found in PATH"
+                      which npm || echo "npm not found in PATH"
+                      node --version || echo "node command failed"
+                      npm --version || echo "npm command failed"
+                      echo "=== Checking /var/jenkins_home/tools ==="
+                      ls -la /var/jenkins_home/tools/ || echo "tools dir not found"
+                    '''
+                }
+            }
+        }
         
         stage('Install Dependencies') {
             steps {
                 script {
                     echo 'Installing backend dependencies...'
                     dir("${BACKEND_DIR}") {
-                        sh 'npm install'
+                        sh '''
+                          node --version
+                          npm --version
+                          npm install
+                        '''
                     }
                 }
             }
@@ -77,16 +102,7 @@ pipeline {
             }
         }
         
-        stage('Deploy to Kubernetes') {
-            steps {
-                script {
-                    echo 'Deploying to Kubernetes cluster...'
-                    sh '''
-                        kubectl set image deployment/backend backend=${DOCKER_IMAGE}:${DOCKER_TAG} -n default --record || true
-                    '''
-                }
-            }
-        }
+        // Kubernetes deployment removed per request
     }
     
     post {
