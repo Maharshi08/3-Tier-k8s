@@ -33,6 +33,23 @@ pipeline {
             }
         }
 
+        stage('Debug Node Environment') {
+            steps {
+                sh '''
+                  echo "=== Debug Info ==="
+                  echo "PATH=$PATH"
+                  echo "JAVA_HOME=$JAVA_HOME"
+                  echo "=== Checking node ==="
+                  which node || echo "node not found in PATH"
+                  which npm || echo "npm not found in PATH"
+                  node --version || echo "node command failed"
+                  npm --version || echo "npm command failed"
+                  echo "=== Checking /var/jenkins_home/tools ==="
+                  ls -la /var/jenkins_home/tools/ || echo "tools dir not found"
+                '''
+            }
+        }
+
         stage('Install Dependencies') {
             steps {
                 echo 'Installing frontend dependencies...'
