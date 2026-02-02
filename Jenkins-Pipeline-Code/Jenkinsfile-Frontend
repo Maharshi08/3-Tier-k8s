@@ -31,15 +31,9 @@ pipeline {
 
         stage('Install Dependencies') {
             steps {
-                echo 'Installing frontend dependencies using Node container...'
+                echo 'Installing frontend dependencies...'
                 dir("${FRONTEND_DIR}") {
-                    sh '''
-                      docker run --rm \
-                        -u root \
-                        -v "$(pwd)":/app \
-                        -w /app \
-                        node:20-alpine npm install
-                    '''
+                    sh 'npm install'
                 }
             }
         }
@@ -48,14 +42,7 @@ pipeline {
             steps {
                 echo 'Building frontend application...'
                 dir("${FRONTEND_DIR}") {
-                    sh '''
-                      docker run --rm \
-                        -u root \
-                        -v "$(pwd)":/app \
-                        -w /app \
-                        -e NODE_OPTIONS=--openssl-legacy-provider \
-                        node:20-alpine npm run build
-                    '''
+                    sh 'NODE_OPTIONS=--openssl-legacy-provider npm run build'
                 }
             }
         }
@@ -64,13 +51,7 @@ pipeline {
             steps {
                 echo 'Running frontend tests...'
                 dir("${FRONTEND_DIR}") {
-                    sh '''
-                      docker run --rm \
-                        -u root \
-                        -v "$(pwd)":/app \
-                        -w /app \
-                        node:20-alpine npm test -- --passWithNoTests || true
-                    '''
+                    sh 'npm test -- --passWithNoTests || true'
                 }
             }
         }
