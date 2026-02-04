@@ -3,6 +3,10 @@ pipeline {
     tools {
         nodejs 'NodeJS_20'
     }
+
+    options {
+        skipStagesAfterUnstable()
+    }
     
     environment {
         REPO_URL = 'https://github.com/Maharshi08/3-Tier-k8s.git'
@@ -71,7 +75,7 @@ pipeline {
                 script {
                     echo 'Running tests...'
                     dir("${BACKEND_DIR}") {
-                        sh 'npm test || true'
+                        sh 'npm test'
                     }
                 }
             }

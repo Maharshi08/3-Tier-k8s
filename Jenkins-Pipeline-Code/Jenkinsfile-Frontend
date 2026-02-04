@@ -5,6 +5,10 @@ pipeline {
         nodejs 'NodeJS_20'
     }
 
+    options {
+        skipStagesAfterUnstable()
+    }
+
     environment {
         REPO_URL     = 'https://github.com/Maharshi08/3-Tier-k8s.git'
         FRONTEND_DIR = 'Application-Code/frontend'
@@ -59,7 +63,7 @@ pipeline {
             steps {
                 echo 'Running frontend tests...'
                 dir("${FRONTEND_DIR}") {
-                    sh 'npm test -- --passWithNoTests || true'
+                    sh 'npm test -- --passWithNoTests'
                 }
             }
         }
