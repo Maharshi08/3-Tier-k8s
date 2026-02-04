@@ -49,12 +49,12 @@ pipeline {
                 script {
                     echo 'Installing backend dependencies...'
                     dir("${BACKEND_DIR}") {
-                        sh '''
-                          node --version
-                          npm --version
-                          npm ci --omit=dev
-                          npm audit fix --audit-level=moderate || true
-                        '''
+                                                sh '''
+                                                    node --version
+                                                    npm --version
+                                                    npm install --omit=dev
+                                                    npm audit fix --audit-level=moderate || true
+                                                '''
                     }
                 }
             }
