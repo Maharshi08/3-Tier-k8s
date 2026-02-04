@@ -44,7 +44,8 @@ pipeline {
                     sh '''
                       node --version
                       npm --version
-                      npm install
+                      npm ci
+                      npm audit fix --audit-level=moderate || true
                     '''
                 }
             }
