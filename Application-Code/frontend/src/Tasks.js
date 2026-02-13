@@ -7,15 +7,28 @@ import {
 } from "./services/taskServices";
 
 class Tasks extends Component {
+    _isMounted = false;
+
     state = { tasks: [], currentTask: "" };
 
+    normalizeTasks = (data) => {
+        return Array.isArray(data) ? data : [];
+    };
+
     async componentDidMount() {
+        this._isMounted = true;
         try {
             const { data } = await getTasks();
-            this.setState({ tasks: data });
+            if (this._isMounted) {
+                this.setState({ tasks: this.normalizeTasks(data) });
+            }
         } catch (error) {
             console.log(error);
         }
+    }
+
+    componentWillUnmount() {
+        this._isMounted = false;
     }
 
     handleChange = ({ currentTarget: input }) => {
@@ -24,22 +37,24 @@ class Tasks extends Component {
 
     handleSubmit = async (e) => {
         e.preventDefault();
-        const originalTasks = this.state.tasks;
         try {
-            const { data } = await addTask({ task: this.state.currentTask });
-            const tasks = originalTasks;
-            tasks.push(data);
-            this.setState({ tasks, currentTask: "" });
+            await addTask({ task: this.state.currentTask });
+            const { data } = await getTasks();
+            this.setState({
+                tasks: this.normalizeTasks(data),
+                currentTask: "",
+            });
         } catch (error) {
             console.log(error);
         }
     };
 
     handleUpdate = async (currentTask) => {
-        const originalTasks = this.state.tasks;
+        const originalTasks = this.normalizeTasks(this.state.tasks);
         try {
             const tasks = [...originalTasks];
             const index = tasks.findIndex((task) => task._id === currentTask);
+            if (index === -1) return;
             tasks[index] = { ...tasks[index] };
             tasks[index].completed = !tasks[index].completed;
             this.setState({ tasks });
@@ -53,7 +68,7 @@ class Tasks extends Component {
     };
 
     handleDelete = async (currentTask) => {
-        const originalTasks = this.state.tasks;
+        const originalTasks = this.normalizeTasks(this.state.tasks);
         try {
             const tasks = originalTasks.filter(
                 (task) => task._id !== currentTask

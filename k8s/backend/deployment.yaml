@@ -1,0 +1,43 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: backend
+  namespace: local-dev
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: backend
+  template:
+    metadata:
+      labels:
+        app: backend
+    spec:
+      containers:
+      - name: backend
+        # Build this image locally (see README) and use this tag
+        image: 3tire/backend:dev
+        imagePullPolicy: Never
+        ports:
+        - containerPort: 3500
+        env:
+        - name: PORT
+          value: "3500"
+        - name: MONGO_CONN_STR
+          value: "mongodb://mongo:27017/tasksdb"
+
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: backend
+  namespace: local-dev
+spec:
+  selector:
+    app: backend
+  ports:
+  - port: 3500
+    targetPort: 3500
+    protocol: TCP
+    nodePort: 30081
+  type: NodePort

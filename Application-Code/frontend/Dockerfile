@@ -7,6 +7,7 @@ COPY package*.json ./
 
 # Install dependencies
 RUN npm install --production
+RUN npm install -g serve
 
 # Copy app source
 COPY . .
@@ -14,5 +15,5 @@ COPY . .
 # App port (optional but good practice)
 EXPOSE 3000
 
-# Start app
-CMD ["npm", "start"]
+# Build at container start (so REACT_APP_* env is picked up) and serve static assets.
+CMD ["sh", "-c", "NODE_OPTIONS=--openssl-legacy-provider npm run build && serve -s build -l 3000"]

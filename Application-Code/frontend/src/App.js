@@ -8,6 +8,7 @@ class App extends Tasks {
 
     render() {
         const { tasks, currentTask } = this.state;
+        const safeTasks = Array.isArray(tasks) ? tasks : [];
         return (
             <div className="app">
                 <header className="app-header">
@@ -30,7 +31,7 @@ class App extends Tasks {
                             </Button>
                         </form>
                         <div className="tasks-list">
-                            {tasks.map((task) => (
+                            {safeTasks.map((task) => (
                                 <Paper key={task._id} className="task-item">
                                     <Checkbox
                                         checked={task.completed}
@@ -54,4 +55,3 @@ class App extends Tasks {
 }
 
 export default App;
-
