@@ -3,14 +3,16 @@ FROM node:20-alpine
 WORKDIR /usr/src/app
 
 # Copy only package files first (better caching)
-COPY package*.json ./
+COPY --chown=node:node package*.json ./
 
 # Install dependencies
-RUN npm install --production
-RUN npm install -g serve
+RUN npm install --omit=dev && npm install -g serve
 
 # Copy app source
-COPY . .
+COPY --chown=node:node . .
+
+# Run as non-root user
+USER node
 
 # App port (optional but good practice)
 EXPOSE 3000

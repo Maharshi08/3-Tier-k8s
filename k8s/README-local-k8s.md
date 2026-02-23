@@ -73,3 +73,38 @@ You can tag images as `3tire/backend:dev` and `3tire/frontend:dev`.
     kubectl logs -n local-dev deploy/backend
     kubectl logs -n local-dev deploy/frontend
     ```
+
+6) Metrics Server + Grafana (local monitoring)
+
+- Install Metrics Server:
+
+  ```bash
+  kubectl apply -f https://github.com/kubernetes-sigs/metrics-server/releases/latest/download/components.yaml
+  kubectl -n kube-system patch deployment metrics-server --type='json' -p='[{"op":"add","path":"/spec/template/spec/containers/0/args/-","value":"--kubelet-insecure-tls"}]'
+  kubectl -n kube-system rollout status deploy/metrics-server
+  kubectl top nodes
+  ```
+
+- Deploy Grafana:
+
+  ```bash
+  kubectl create namespace monitoring
+  kubectl create secret generic grafana-admin -n monitoring \
+    --from-literal=admin-user=admin \
+    --from-literal=admin-password=admin123
+  kubectl create deployment grafana -n monitoring --image=grafana/grafana:11.1.0
+  kubectl expose deployment grafana -n monitoring --port=3000 --target-port=3000 --name=grafana
+  kubectl -n monitoring set env deploy/grafana \
+    GF_SECURITY_ADMIN_USER=admin \
+    GF_SECURITY_ADMIN_PASSWORD=admin123 \
+    GF_USERS_ALLOW_SIGN_UP=false
+  kubectl -n monitoring rollout status deploy/grafana
+  ```
+
+- Access Grafana:
+
+  ```bash
+  kubectl -n monitoring port-forward svc/grafana 3100:3000
+  ```
+
+  Open `http://localhost:3100` and log in with `admin` / `admin123`.

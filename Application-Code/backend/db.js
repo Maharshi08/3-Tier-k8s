@@ -1,6 +1,8 @@
 const mongoose = require("mongoose");
 
-module.exports = async () => {
+const retryDelayMs = Number(process.env.MONGO_RETRY_DELAY_MS || 5000);
+
+const connectWithRetry = async () => {
     try {
         const connectionParams = {
             // user: process.env.MONGO_USERNAME,
@@ -20,6 +22,12 @@ module.exports = async () => {
         );
         console.log("Connected to database.");
     } catch (error) {
-        console.log("Could not connect to database.", error);
+        console.log(
+            `Could not connect to database. Retrying in ${retryDelayMs}ms.`,
+            error.message
+        );
+        setTimeout(connectWithRetry, retryDelayMs);
     }
 };
+
+module.exports = connectWithRetry;

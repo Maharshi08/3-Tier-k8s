@@ -1,6 +1,16 @@
 import axios from "axios";
-const apiUrl = process.env.REACT_APP_BACKEND_URL //"http://localhost:8080/api/tasks";
-console.log(apiUrl)
+
+function buildApiUrl() {
+    const rawUrl =
+        process.env.REACT_APP_BACKEND_URL ||
+        process.env.REACT_APP_API_URL ||
+        "http://localhost:3500";
+    const trimmed = rawUrl.replace(/\/+$/, "");
+    return trimmed.endsWith("/api/tasks") ? trimmed : `${trimmed}/api/tasks`;
+}
+
+const apiUrl = buildApiUrl();
+
 export function getTasks() {
     return axios.get(apiUrl);
 }
